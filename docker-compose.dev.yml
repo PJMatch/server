@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  db:
+    # Use official PostgreSQL 16 image
+    image: postgres:16
+    container_name: pjmatch_db
+    restart: always
+    environment:
+      POSTGRES_USER: pjmatch_user
+      POSTGRES_PASSWORD: pjmatch_password
+      POSTGRES_DB: pjmatch_local
+    ports:
+      # Map host port 5432 to container port 5432
+      - "5432:5432"
+    volumes:
+      # Mount named volume to persist data across container restarts
+      - pgdata_local:/var/lib/postgresql/data
+
+  adminer:
+    # Lightweight web-based database management tool
+    image: adminer
+    container_name: pjmatch_adminer
+    restart: always
+    ports:
+      # Map host port 8081 to container port 8080
+      - "8081:8080"
+    depends_on:
+      - db
+
+volumes:
+  # Define the named volume for persistent storage
+  pgdata_local:

@@ -32,6 +32,9 @@ export default function NavBar() {
 
         {/* Navigation Tabs */}
         <nav className="flex items-center gap-2 md:gap-4">
+          <Link to="/nagraj" className={getLinkClasses('/nagraj')}>
+            Nagraj zdanie
+          </Link>
           <Link to="/" className={getLinkClasses('/')}>
             Logowanie
           </Link>

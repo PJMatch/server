@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import NavBar from './components/layout/NavBar';
 import LoginPage from './pages/LoginPage';
+import RecordSentencePage from './pages/RecordSentencePage';
 
 // Main Application Component
 function App() {
@@ -21,6 +22,7 @@ function App() {
         <main className="flex-1 flex items-center justify-center p-8 z-10">
           <Routes>
             <Route path="/" element={<LoginPage />} />
+            <Route path="/nagraj" element={<RecordSentencePage />} />
           </Routes>
         </main>
       </div>

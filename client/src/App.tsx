@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import NavBar from './components/layout/NavBar';
 import LoginPage from './pages/LoginPage';
 import RecordSentencePage from './pages/RecordSentencePage';
+import ComponentsPage from './pages/ComponentsPage';
 
 // Main Application Component
 function App() {
@@ -23,6 +24,7 @@ function App() {
           <Routes>
             <Route path="/" element={<LoginPage />} />
             <Route path="/nagraj" element={<RecordSentencePage />} />
+            <Route path="/komponenty" element={<ComponentsPage />} />
           </Routes>
         </main>
       </div>

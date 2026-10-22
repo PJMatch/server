@@ -35,6 +35,9 @@ export default function NavBar() {
           <Link to="/nagraj" className={getLinkClasses('/nagraj')}>
             Nagraj zdanie
           </Link>
+          <Link to="/komponenty" className={getLinkClasses('/komponenty')}>
+            Komponenty
+          </Link>
           <Link to="/" className={getLinkClasses('/')}>
             Logowanie
           </Link>

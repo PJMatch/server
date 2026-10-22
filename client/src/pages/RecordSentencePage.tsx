@@ -88,14 +88,6 @@ export default function RecordSentencePage() {
             ))}
           </select>
 
-          <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4">
-            <span className="text-xs uppercase text-center font-extrabold text-blue-900 block mb-1">
-              Aktualnie migane zdanie:
-            </span>
-            <p className="text-sm lg:text-base font-bold text-center text-blue-950 leading-snug">
-              „{selectedSentence}”
-            </p>
-          </div>
         </div>
       </div>
 

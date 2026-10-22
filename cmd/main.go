@@ -1,14 +1,18 @@
 package main
 
-//temp
-import "github.com/gin-gonic/gin"
+import (
+	"log"
+
+	"github.com/PJMatch/server/internal/app"
+)
 
 func main() {
-	router := gin.Default()
-	router.GET("/ping", func(c *gin.Context) {
-		c.JSON(200, gin.H{
-			"message": "pong",
-		})
-	})
-	router.Run()
+	a, err := app.New()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if err := a.Run(); err != nil {
+		log.Fatal(err)
+	}
 }

@@ -1,4 +1,4 @@
-.PHONY: dev-db stop-db clean-db run
+.PHONY: dev-db stop-db clean-db run test
 
 # Starts the database and adminer containers in the background
 dev-db:
@@ -12,8 +12,10 @@ stop-db:
 clean-db:
 	docker-compose -f docker-compose.dev.yml down -v
 
-# Placeholder for running the Go backend server
-run:
-	@echo "Starting local database..."
-	make dev-db
-	@echo "Ready to run Go server (command will be added here later)"
+# Starts the local database and runs the Go backend server
+run: dev-db
+	go run ./cmd
+
+# Runs unit tests
+test:
+	go test ./internal/utils/...

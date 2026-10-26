@@ -6,6 +6,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -28,7 +30,7 @@ type App struct {
 }
 
 func New() (*App, error) {
-	if err := godotenv.Load(); err != nil {
+	if err := godotenv.Load(filepath.Join(serverRoot(), ".env")); err != nil {
 		log.Println("no .env file found, using system environment")
 	}
 
@@ -42,6 +44,13 @@ func New() (*App, error) {
 	}
 
 	seedPath := getEnv("SIGNS_SEED_FILE", "internal/database/signs.json")
+	if _, err := os.Stat(seedPath); err != nil {
+		if fallback := filepath.Join(serverRoot(), "internal", "database", "signs.json"); fallback != seedPath {
+			if _, err := os.Stat(fallback); err == nil {
+				seedPath = fallback
+			}
+		}
+	}
 	if err := database.SeedSigns(db, seedPath); err != nil {
 		log.Printf("[Seeder Warning] %v", err)
 	}
@@ -119,6 +128,14 @@ func (a *App) health(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"status": "ok", "database": "up"})
+}
+
+func serverRoot() string {
+	_, file, _, ok := runtime.Caller(0)
+	if !ok {
+		return "."
+	}
+	return filepath.Dir(filepath.Dir(filepath.Dir(file)))
 }
 
 func getEnv(key, fallback string) string {

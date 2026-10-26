@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/PJMatch/server/internal/database"
+	"github.com/PJMatch/server/internal/models"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -37,6 +39,11 @@ func New() (*App, error) {
 
 	if err := migrate(db); err != nil {
 		return nil, fmt.Errorf("auto-migrate: %w", err)
+	}
+
+	seedPath := getEnv("SIGNS_SEED_FILE", "internal/database/signs.json")
+	if err := database.SeedSigns(db, seedPath); err != nil {
+		log.Printf("[Seeder Warning] %v", err)
 	}
 
 	a := &App{
@@ -72,7 +79,9 @@ func connectDB() (*gorm.DB, error) {
 }
 
 func migrate(db *gorm.DB) error {
-	return db.AutoMigrate()
+	return db.AutoMigrate(
+		&models.Sign{},
+	)
 }
 
 func (a *App) setupMiddleware() {

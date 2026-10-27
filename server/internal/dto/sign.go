@@ -1,14 +1,18 @@
 package dto
 
-import "github.com/PJMatch/server/internal/models"
+import (
+	"github.com/google/uuid"
+
+	"github.com/PJMatch/server/internal/models"
+)
 
 type SignResponse struct {
-	ID         uint   `json:"id"`
-	Name       string `json:"name"`
-	Slug       string `json:"slug"`
-	Category   string `json:"category"`
-	Difficulty string `json:"difficulty"`
-	VideoURL   string `json:"video_url"`
+	ID         uuid.UUID `json:"id"`
+	Name       string    `json:"name"`
+	Slug       string    `json:"slug"`
+	Category   string    `json:"category"`
+	Difficulty string    `json:"difficulty"`
+	VideoURL   string    `json:"video_url"`
 }
 
 func ToSignResponse(sign models.Sign) SignResponse {

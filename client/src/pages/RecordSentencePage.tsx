@@ -8,12 +8,14 @@ const SENTENCES = [
   "Dziękuję za pomoc i miłe spotkanie."
 ];
 
-const GLOSSES = [
-  "JA-NIE-ROZUMIEĆ-TY-MÓWIĆ-CO",
-  "DZIEŃ-DOBRY-JAK-TY-CZUJESZ-DZISIAJ",
-  "PRZYSTANEK-AUTOBUSOWY-NAJBLIŻSZY-GDZIE",
-  "DZIĘKUJĘ-POMOC-SPOTKANIE-MIŁE"
+const SENTENCE_GLOSS_LIST: string[][] = [
+  ["JA", "NIE-ROZUMIEM", "TY", "CO", "MÓWIĆ", "CO"],
+  ["DZIEŃ-DOBRY", "JAK", "TY", "CZUJESZ", "DZISIAJ"],
+  ["PRZYSTANEK", "AUTOBUSOWY", "NAJBLIŻSZY", "GDZIE"],
+  ["DZIĘKUJĘ", "POMOC", "SPOTKANIE", "MIŁE"]
 ];
+
+const GLOSSES = SENTENCE_GLOSS_LIST.map((list) => list.join(" - "));
 
 const SENTENCE_OPTIONS = SENTENCES.map((sentence, index) => ({
   value: sentence,
@@ -31,6 +33,7 @@ export default function RecordSentencePage() {
 
   const [selectedSentence, setSelectedSentence] = useState<string>(SENTENCES[0]);
   const selectedSentenceIdx = SENTENCES.indexOf(selectedSentence);
+  const currentGlosses = SENTENCE_GLOSS_LIST[selectedSentenceIdx] || [];
 
   const [status, setStatus] = useState<RecordingStatus>('IDLE');
   const [countdown, setCountdown] = useState<number>(3);
@@ -40,8 +43,10 @@ export default function RecordSentencePage() {
   const [duration, setDuration] = useState<number>(0);
   const [trimStart, setTrimStart] = useState<number>(0);
   const [trimEnd, setTrimEnd] = useState<number>(0);
+  const [glossMarkers, setGlossMarkers] = useState<number[]>([]);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
-  const [activeHandle, setActiveHandle] = useState<'none' | 'playhead' | 'trimStart' | 'trimEnd'>('none');
+  const [activeHandle, setActiveHandle] = useState<string>('none');
+  const [showJsonPreview, setShowJsonPreview] = useState<boolean>(false);
 
   const isExpanded = status !== 'IDLE';
 
@@ -178,7 +183,9 @@ export default function RecordSentencePage() {
     setDuration(0);
     setTrimStart(0);
     setTrimEnd(0);
+    setGlossMarkers([]);
     setActiveHandle('none');
+    setShowJsonPreview(false);
     if (recordedVideoUrl) {
       URL.revokeObjectURL(recordedVideoUrl);
       setRecordedVideoUrl(null);
@@ -208,19 +215,21 @@ export default function RecordSentencePage() {
     }
   };
 
-  const handleSeek = (clientX: number, handle: 'none' | 'playhead' | 'trimStart' | 'trimEnd') => {
+  const handleSeek = (clientX: number, handle: string) => {
     if (!timelineRef.current || !videoRef.current || duration <= 0) return;
     const rect = timelineRef.current.getBoundingClientRect();
     const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
     const targetTime = ratio * duration;
 
     if (handle === 'trimStart') {
-      const newTrimStart = Math.max(0, Math.min(trimEnd - 0.2, targetTime));
+      const maxAllowed = glossMarkers.length > 0 ? glossMarkers[0] - 0.05 : trimEnd - 0.1;
+      const newTrimStart = Math.max(0, Math.min(maxAllowed, targetTime));
       setTrimStart(newTrimStart);
       videoRef.current.currentTime = newTrimStart;
       setCurrentTime(newTrimStart);
     } else if (handle === 'trimEnd') {
-      const newTrimEnd = Math.max(trimStart + 0.2, Math.min(duration, targetTime));
+      const minAllowed = glossMarkers.length > 0 ? glossMarkers[glossMarkers.length - 1] + 0.05 : trimStart + 0.1;
+      const newTrimEnd = Math.max(minAllowed, Math.min(duration, targetTime));
       setTrimEnd(newTrimEnd);
       videoRef.current.currentTime = newTrimEnd;
       setCurrentTime(newTrimEnd);
@@ -228,6 +237,20 @@ export default function RecordSentencePage() {
       const newTime = Math.max(0, Math.min(duration, targetTime));
       videoRef.current.currentTime = newTime;
       setCurrentTime(newTime);
+    } else if (handle.startsWith('marker-')) {
+      const idx = parseInt(handle.replace('marker-', ''), 10);
+      const minAllowed = idx === 0 ? trimStart + 0.05 : glossMarkers[idx - 1] + 0.05;
+      const maxAllowed = idx === glossMarkers.length - 1 ? trimEnd - 0.05 : glossMarkers[idx + 1] - 0.05;
+      const newMarkerTime = Math.max(minAllowed, Math.min(maxAllowed, targetTime));
+
+      setGlossMarkers((prev) => {
+        const next = [...prev];
+        next[idx] = newMarkerTime;
+        return next;
+      });
+
+      videoRef.current.currentTime = newMarkerTime;
+      setCurrentTime(newMarkerTime);
     }
   };
 
@@ -241,6 +264,21 @@ export default function RecordSentencePage() {
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
   const trimStartPercent = duration > 0 ? (trimStart / duration) * 100 : 0;
   const trimEndPercent = duration > 0 ? (trimEnd / duration) * 100 : 100;
+
+  const calculatedAnnotations = currentGlosses.map((gloss, idx) => {
+    const endTime = idx < glossMarkers.length ? glossMarkers[idx] : trimEnd;
+    const frame = Math.round(Math.max(0, endTime - trimStart) * 30);
+    return [gloss, frame] as [string, number];
+  });
+  const eorFrame = Math.round(Math.max(0, trimEnd - trimStart) * 30);
+  const finalAnnotationList = [...calculatedAnnotations, ["EoR", eorFrame] as [string, number]];
+
+  const finalJsonOutput = {
+    recorded_correctly: true,
+    sentence: selectedSentence,
+    fps: 30,
+    glosses: finalAnnotationList
+  };
 
   return (
     <div 
@@ -297,7 +335,7 @@ export default function RecordSentencePage() {
         <div 
           className={`relative aspect-video bg-black rounded-2xl overflow-hidden border-4 border-blue-900 shadow-[8px_8px_0px_0px_rgba(30,58,138,0.15)] transition-all duration-500 ease-in-out flex-shrink ${
             isExpanded 
-              ? 'max-h-[42vh] max-w-3xl w-full' 
+              ? 'max-h-[38vh] max-w-3xl w-full' 
               : 'max-h-[36vh] max-w-md w-full'
           }`}
         >
@@ -325,6 +363,17 @@ export default function RecordSentencePage() {
                 setTrimStart(0);
                 setTrimEnd(dur);
                 setCurrentTime(0);
+
+                const numGlosses = currentGlosses.length;
+                if (numGlosses > 1 && dur > 0) {
+                  const initialMarkers: number[] = [];
+                  for (let i = 1; i < numGlosses; i++) {
+                    initialMarkers.push((i / numGlosses) * dur);
+                  }
+                  setGlossMarkers(initialMarkers);
+                } else {
+                  setGlossMarkers([]);
+                }
               }
             }}
             onPlay={() => setIsPlaying(true)}
@@ -369,7 +418,7 @@ export default function RecordSentencePage() {
           )}
         </div>
 
-        <div className="flex-shrink-0 mt-3 w-full max-w-3xl flex flex-col items-center">
+        <div className="flex-shrink-0 mt-2.5 w-full max-w-3xl flex flex-col items-center">
           {status === 'IDLE' && (
             <Button
               variant="primary"
@@ -402,7 +451,7 @@ export default function RecordSentencePage() {
           )}
 
           {status === 'ANNOTATING' && (
-            <Card variant="flat" noPadding className="w-full p-3 flex flex-col gap-2">
+            <Card variant="flat" noPadding className="w-full p-2.5 flex flex-col gap-2">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-3">
                   <Button
@@ -418,13 +467,45 @@ export default function RecordSentencePage() {
                   </span>
                 </div>
 
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={handleReset}
-                >
-                  Nagraj ponownie
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowJsonPreview((prev) => !prev)}
+                  >
+                    {showJsonPreview ? "Ukryj JSON" : "Podgląd JSON"}
+                  </Button>
+
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={handleReset}
+                  >
+                    Nagraj ponownie
+                  </Button>
+                </div>
+              </div>
+
+              <div className="relative w-full h-5 overflow-hidden flex text-[10px] font-black text-blue-900">
+                {currentGlosses.map((gloss, idx) => {
+                  const segStart = idx === 0 ? trimStartPercent : (glossMarkers[idx - 1] / duration) * 100;
+                  const segEnd = idx < glossMarkers.length ? (glossMarkers[idx] / duration) * 100 : trimEndPercent;
+                  const segWidth = Math.max(0, segEnd - segStart);
+
+                  return (
+                    <div
+                      key={idx}
+                      className="absolute top-0 bottom-0 bg-blue-50 border border-blue-900/30 rounded px-0.5 flex items-center justify-center truncate pointer-events-none"
+                      style={{
+                        left: `${segStart}%`,
+                        width: `${segWidth}%`
+                      }}
+                      title={gloss}
+                    >
+                      {gloss}
+                    </div>
+                  );
+                })}
               </div>
 
               <div
@@ -435,8 +516,8 @@ export default function RecordSentencePage() {
                   handleSeek(e.clientX, 'playhead');
                 }}
                 onPointerMove={(e) => {
-                  if (activeHandle === 'playhead') {
-                    handleSeek(e.clientX, 'playhead');
+                  if (activeHandle !== 'none') {
+                    handleSeek(e.clientX, activeHandle);
                   }
                 }}
                 onPointerUp={(e) => {
@@ -470,26 +551,36 @@ export default function RecordSentencePage() {
                   }}
                 />
 
+                {glossMarkers.map((markerTime, idx) => {
+                  const markerPercent = duration > 0 ? (markerTime / duration) * 100 : 0;
+                  return (
+                    <div
+                      key={idx}
+                      onPointerDown={(e) => {
+                        e.stopPropagation();
+                        timelineRef.current?.setPointerCapture(e.pointerId);
+                        setActiveHandle(`marker-${idx}`);
+                        handleSeek(e.clientX, `marker-${idx}`);
+                      }}
+                      className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3.5 h-8 bg-blue-900 border-2 border-[#fca55d] rounded cursor-ew-resize z-25 flex items-center justify-center shadow"
+                      style={{ left: `${markerPercent}%` }}
+                      title={`Koniec ${currentGlosses[idx]} / Początek ${currentGlosses[idx + 1]}`}
+                    >
+                      <div className="w-0.5 h-3 bg-[#fca55d]" />
+                    </div>
+                  );
+                })}
+
                 <div
                   onPointerDown={(e) => {
                     e.stopPropagation();
-                    e.currentTarget.setPointerCapture(e.pointerId);
+                    timelineRef.current?.setPointerCapture(e.pointerId);
                     setActiveHandle('trimStart');
                     handleSeek(e.clientX, 'trimStart');
                   }}
-                  onPointerMove={(e) => {
-                    if (activeHandle === 'trimStart') {
-                      handleSeek(e.clientX, 'trimStart');
-                    }
-                  }}
-                  onPointerUp={(e) => {
-                    setActiveHandle('none');
-                    try {
-                      e.currentTarget.releasePointerCapture(e.pointerId);
-                    } catch {}
-                  }}
-                  className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-8 bg-red-600 border-2 border-white rounded cursor-ew-resize z-20 flex items-center justify-center shadow"
+                  className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-8 bg-red-600 border-2 border-white rounded cursor-ew-resize z-30 flex items-center justify-center shadow"
                   style={{ left: `${trimStartPercent}%` }}
+                  title="Początek nagrania"
                 >
                   <div className="w-0.5 h-3 bg-white" />
                 </div>
@@ -497,32 +588,28 @@ export default function RecordSentencePage() {
                 <div
                   onPointerDown={(e) => {
                     e.stopPropagation();
-                    e.currentTarget.setPointerCapture(e.pointerId);
+                    timelineRef.current?.setPointerCapture(e.pointerId);
                     setActiveHandle('trimEnd');
                     handleSeek(e.clientX, 'trimEnd');
                   }}
-                  onPointerMove={(e) => {
-                    if (activeHandle === 'trimEnd') {
-                      handleSeek(e.clientX, 'trimEnd');
-                    }
-                  }}
-                  onPointerUp={(e) => {
-                    setActiveHandle('none');
-                    try {
-                      e.currentTarget.releasePointerCapture(e.pointerId);
-                    } catch {}
-                  }}
-                  className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-8 bg-red-600 border-2 border-white rounded cursor-ew-resize z-20 flex items-center justify-center shadow"
+                  className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-8 bg-red-600 border-2 border-white rounded cursor-ew-resize z-30 flex items-center justify-center shadow"
                   style={{ left: `${trimEndPercent}%` }}
+                  title="Koniec nagrania (EoR)"
                 >
                   <div className="w-0.5 h-3 bg-white" />
                 </div>
 
                 <div
-                  className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3 h-6 bg-blue-900 border-2 border-white rounded shadow-md pointer-events-none z-30"
+                  className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3 h-6 bg-blue-950 border-2 border-white rounded shadow-md pointer-events-none z-40"
                   style={{ left: `${progressPercent}%` }}
                 />
               </div>
+
+              {showJsonPreview && (
+                <div className="bg-slate-900 text-emerald-400 p-2.5 rounded-xl font-mono text-[11px] overflow-x-auto max-h-36">
+                  <pre>{JSON.stringify(finalJsonOutput, null, 2)}</pre>
+                </div>
+              )}
             </Card>
           )}
         </div>

@@ -38,8 +38,10 @@ export default function RecordSentencePage() {
 
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [duration, setDuration] = useState<number>(0);
+  const [trimStart, setTrimStart] = useState<number>(0);
+  const [trimEnd, setTrimEnd] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
-  const [isDragging, setIsDragging] = useState<boolean>(false);
+  const [activeHandle, setActiveHandle] = useState<'none' | 'playhead' | 'trimStart' | 'trimEnd'>('none');
 
   const isExpanded = status !== 'IDLE';
 
@@ -174,6 +176,9 @@ export default function RecordSentencePage() {
     setIsPlaying(false);
     setCurrentTime(0);
     setDuration(0);
+    setTrimStart(0);
+    setTrimEnd(0);
+    setActiveHandle('none');
     if (recordedVideoUrl) {
       URL.revokeObjectURL(recordedVideoUrl);
       setRecordedVideoUrl(null);
@@ -203,32 +208,27 @@ export default function RecordSentencePage() {
     }
   };
 
-  const handleSeek = (clientX: number) => {
+  const handleSeek = (clientX: number, handle: 'none' | 'playhead' | 'trimStart' | 'trimEnd') => {
     if (!timelineRef.current || !videoRef.current || duration <= 0) return;
     const rect = timelineRef.current.getBoundingClientRect();
     const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-    const newTime = ratio * duration;
-    videoRef.current.currentTime = newTime;
-    setCurrentTime(newTime);
-  };
+    const targetTime = ratio * duration;
 
-  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    e.currentTarget.setPointerCapture(e.pointerId);
-    setIsDragging(true);
-    handleSeek(e.clientX);
-  };
-
-  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!isDragging) return;
-    handleSeek(e.clientX);
-  };
-
-  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!isDragging) return;
-    setIsDragging(false);
-    try {
-      e.currentTarget.releasePointerCapture(e.pointerId);
-    } catch {}
+    if (handle === 'trimStart') {
+      const newTrimStart = Math.max(0, Math.min(trimEnd - 0.2, targetTime));
+      setTrimStart(newTrimStart);
+      videoRef.current.currentTime = newTrimStart;
+      setCurrentTime(newTrimStart);
+    } else if (handle === 'trimEnd') {
+      const newTrimEnd = Math.max(trimStart + 0.2, Math.min(duration, targetTime));
+      setTrimEnd(newTrimEnd);
+      videoRef.current.currentTime = newTrimEnd;
+      setCurrentTime(newTrimEnd);
+    } else if (handle === 'playhead') {
+      const newTime = Math.max(0, Math.min(duration, targetTime));
+      videoRef.current.currentTime = newTime;
+      setCurrentTime(newTime);
+    }
   };
 
   const formatTime = (timeInSeconds: number) => {
@@ -239,6 +239,8 @@ export default function RecordSentencePage() {
   };
 
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
+  const trimStartPercent = duration > 0 ? (trimStart / duration) * 100 : 0;
+  const trimEndPercent = duration > 0 ? (trimEnd / duration) * 100 : 100;
 
   return (
     <div 
@@ -306,13 +308,23 @@ export default function RecordSentencePage() {
             muted={status !== 'ANNOTATING'} 
             className="w-full h-full object-cover"
             onTimeUpdate={() => {
-              if (!isDragging && videoRef.current) {
-                setCurrentTime(videoRef.current.currentTime);
+              if (activeHandle === 'none' && videoRef.current) {
+                const curr = videoRef.current.currentTime;
+                if (trimEnd > 0 && curr >= trimEnd) {
+                  videoRef.current.currentTime = trimStart;
+                  setCurrentTime(trimStart);
+                } else {
+                  setCurrentTime(curr);
+                }
               }
             }}
             onLoadedMetadata={() => {
               if (videoRef.current) {
-                setDuration(videoRef.current.duration || 0);
+                const dur = videoRef.current.duration || 0;
+                setDuration(dur);
+                setTrimStart(0);
+                setTrimEnd(dur);
+                setCurrentTime(0);
               }
             }}
             onPlay={() => setIsPlaying(true)}
@@ -391,7 +403,7 @@ export default function RecordSentencePage() {
 
           {status === 'ANNOTATING' && (
             <Card variant="flat" noPadding className="w-full p-3 flex flex-col gap-2">
-              <div className="flex items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-3">
                   <Button
                     variant="primary"
@@ -417,18 +429,97 @@ export default function RecordSentencePage() {
 
               <div
                 ref={timelineRef}
-                onPointerDown={handlePointerDown}
-                onPointerMove={handlePointerMove}
-                onPointerUp={handlePointerUp}
-                className="relative w-full h-4 bg-slate-100 border-2 border-blue-900 rounded-lg cursor-pointer touch-none select-none overflow-visible"
+                onPointerDown={(e) => {
+                  timelineRef.current?.setPointerCapture(e.pointerId);
+                  setActiveHandle('playhead');
+                  handleSeek(e.clientX, 'playhead');
+                }}
+                onPointerMove={(e) => {
+                  if (activeHandle === 'playhead') {
+                    handleSeek(e.clientX, 'playhead');
+                  }
+                }}
+                onPointerUp={(e) => {
+                  setActiveHandle('none');
+                  try {
+                    e.currentTarget.releasePointerCapture(e.pointerId);
+                  } catch {}
+                }}
+                className="relative w-full h-6 bg-slate-200 border-2 border-blue-900 rounded-lg cursor-pointer touch-none select-none overflow-visible"
               >
                 <div
-                  className="h-full bg-[#fca55d] rounded-l-md"
-                  style={{ width: `${progressPercent}%` }}
+                  className="absolute top-0 bottom-0 left-0 bg-slate-400/50 border-r-2 border-red-600 rounded-l-md pointer-events-none"
+                  style={{ width: `${trimStartPercent}%` }}
                 />
 
                 <div
-                  className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3 h-5 bg-blue-900 border-2 border-white rounded shadow-md pointer-events-none"
+                  className="absolute top-0 bottom-0 bg-blue-100 pointer-events-none"
+                  style={{ left: `${trimStartPercent}%`, width: `${Math.max(0, trimEndPercent - trimStartPercent)}%` }}
+                />
+
+                <div
+                  className="absolute top-0 bottom-0 right-0 bg-slate-400/50 border-l-2 border-red-600 rounded-r-md pointer-events-none"
+                  style={{ width: `${Math.max(0, 100 - trimEndPercent)}%` }}
+                />
+
+                <div
+                  className="absolute top-0 bottom-0 bg-[#fca55d]/80 pointer-events-none"
+                  style={{
+                    left: `${trimStartPercent}%`,
+                    width: `${Math.max(0, Math.min(progressPercent, trimEndPercent) - trimStartPercent)}%`
+                  }}
+                />
+
+                <div
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    e.currentTarget.setPointerCapture(e.pointerId);
+                    setActiveHandle('trimStart');
+                    handleSeek(e.clientX, 'trimStart');
+                  }}
+                  onPointerMove={(e) => {
+                    if (activeHandle === 'trimStart') {
+                      handleSeek(e.clientX, 'trimStart');
+                    }
+                  }}
+                  onPointerUp={(e) => {
+                    setActiveHandle('none');
+                    try {
+                      e.currentTarget.releasePointerCapture(e.pointerId);
+                    } catch {}
+                  }}
+                  className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-8 bg-red-600 border-2 border-white rounded cursor-ew-resize z-20 flex items-center justify-center shadow"
+                  style={{ left: `${trimStartPercent}%` }}
+                >
+                  <div className="w-0.5 h-3 bg-white" />
+                </div>
+
+                <div
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    e.currentTarget.setPointerCapture(e.pointerId);
+                    setActiveHandle('trimEnd');
+                    handleSeek(e.clientX, 'trimEnd');
+                  }}
+                  onPointerMove={(e) => {
+                    if (activeHandle === 'trimEnd') {
+                      handleSeek(e.clientX, 'trimEnd');
+                    }
+                  }}
+                  onPointerUp={(e) => {
+                    setActiveHandle('none');
+                    try {
+                      e.currentTarget.releasePointerCapture(e.pointerId);
+                    } catch {}
+                  }}
+                  className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-8 bg-red-600 border-2 border-white rounded cursor-ew-resize z-20 flex items-center justify-center shadow"
+                  style={{ left: `${trimEndPercent}%` }}
+                >
+                  <div className="w-0.5 h-3 bg-white" />
+                </div>
+
+                <div
+                  className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3 h-6 bg-blue-900 border-2 border-white rounded shadow-md pointer-events-none z-30"
                   style={{ left: `${progressPercent}%` }}
                 />
               </div>

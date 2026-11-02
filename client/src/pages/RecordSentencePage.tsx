@@ -462,19 +462,19 @@ export default function RecordSentencePage() {
                     {isPlaying ? "Pauza" : "Odtwórz"}
                   </Button>
 
-                  <span className="text-xs font-black font-mono text-blue-900">
-                    {formatTime(currentTime)} / {formatTime(duration)}
-                  </span>
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <Button
+                  <span className="text-xs font-black font-mono text-blue-900">
+                    {formatTime(currentTime)} / {formatTime(duration)}
+                  </span>
+                  {/* <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setShowJsonPreview((prev) => !prev)}
                   >
                     {showJsonPreview ? "Ukryj JSON" : "Podgląd JSON"}
-                  </Button>
+                  </Button> */}
 
                   <Button
                     variant="secondary"

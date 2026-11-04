@@ -5,6 +5,7 @@ import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import RecordSentencePage from './pages/RecordSentencePage';
 import ComponentsPage from './pages/ComponentsPage';
+import ProtectedRoute from './components/ProtectedRoute';
 
 export default function App() {
   return (
@@ -14,8 +15,17 @@ export default function App() {
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/logowanie" element={<LoginPage />} />
-            <Route path="/nagraj" element={<RecordSentencePage />} />
             <Route path="/komponenty" element={<ComponentsPage />} />
+
+            {/* Protected routes */}
+            <Route
+              path="/nagraj"
+              element={
+                <ProtectedRoute>
+                  <RecordSentencePage />
+                </ProtectedRoute>
+              }
+            />
           </Routes>
         </PageLayout>
       </AuthProvider>

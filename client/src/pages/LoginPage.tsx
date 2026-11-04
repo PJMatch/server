@@ -1,26 +1,30 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Button, Card, Input } from '../components/ui';
 
 export default function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
-  const [email, setEmail] = useState('');
+  // Retrieve origin route from ProtectedRoute redirection state or fallback to home
+  const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/';
+
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [emailError, setEmailError] = useState('');
+  const [usernameError, setUsernameError] = useState('');
   const [passwordError, setPasswordError] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     let valid = true;
 
-    if (!email.includes('@')) {
-      setEmailError('Podaj poprawny adres e-mail.');
+    if (!username.trim()) {
+      setUsernameError('Wprowadź login lub adres e-mail.');
       valid = false;
     } else {
-      setEmailError('');
+      setUsernameError('');
     }
 
     if (password.length < 1) {
@@ -32,27 +36,39 @@ export default function LoginPage() {
 
     if (!valid) return;
 
-    // Symulacja logowania (do zastąpienia wywołaniem API)
-    login({ login: email.split('@')[0], email });
-    navigate('/');
+    // Simulate login with mock JWT tokens until backend endpoints are available
+    const normalizedUsername = username.includes('@') ? username.split('@')[0] : username.trim();
+    login(
+      {
+        username: normalizedUsername,
+        login: normalizedUsername,
+        email: username.includes('@') ? username : `${normalizedUsername}@pjmatch.local`,
+      },
+      {
+        accessToken: 'mock-access-token-' + Date.now(),
+        refreshToken: 'mock-refresh-token-' + Date.now(),
+      }
+    );
+
+    navigate(from, { replace: true });
   };
 
   return (
     <div className="w-full max-w-6xl flex flex-col md:flex-row gap-12 items-center justify-center">
 
-      {/* Lewa kolumna – formularz */}
+      {/* Left column – login form */}
       <Card variant="default" className="w-full max-w-md flex-shrink-0">
         <h2 className="text-3xl font-extrabold mb-8 text-center tracking-tight text-blue-900">
           Logowanie
         </h2>
         <form className="flex flex-col gap-5" onSubmit={handleSubmit} noValidate>
           <Input
-            label="Adres e-mail"
-            type="email"
-            placeholder="jan.kowalski@pg.edu.pl"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            error={emailError}
+            label="Login lub e-mail"
+            type="text"
+            placeholder="np. jan.kowalski@pg.edu.pl"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            error={usernameError}
             icon={
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
                 <path d="M3 4a2 2 0 0 0-2 2v1.161l8.441 4.221a1.25 1.25 0 0 0 1.118 0L19 7.162V6a2 2 0 0 0-2-2H3Z" />
@@ -86,7 +102,7 @@ export default function LoginPage() {
         </p>
       </Card>
 
-      {/* Prawa kolumna – hero */}
+      {/* Right column – hero branding */}
       <div className="flex-1 flex flex-col items-center justify-center max-w-2xl text-center">
         <img
           src="/logo.png"

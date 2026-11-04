@@ -11,23 +11,36 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <PageLayout>
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/logowanie" element={<LoginPage />} />
-            <Route path="/komponenty" element={<ComponentsPage />} />
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <PageLayout fullWidth>
+                <HomePage />
+              </PageLayout>
+            }
+          />
 
-            {/* Protected routes */}
-            <Route
-              path="/nagraj"
-              element={
-                <ProtectedRoute>
-                  <RecordSentencePage />
-                </ProtectedRoute>
-              }
-            />
-          </Routes>
-        </PageLayout>
+          <Route
+            path="/*"
+            element={
+              <PageLayout>
+                <Routes>
+                  <Route path="/logowanie" element={<LoginPage />} />
+                  <Route path="/komponenty" element={<ComponentsPage />} />
+                  <Route
+                    path="/nagraj"
+                    element={
+                      <ProtectedRoute>
+                        <RecordSentencePage />
+                      </ProtectedRoute>
+                    }
+                  />
+                </Routes>
+              </PageLayout>
+            }
+          />
+        </Routes>
       </AuthProvider>
     </BrowserRouter>
   );

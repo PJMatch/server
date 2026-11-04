@@ -1,4 +1,4 @@
-.PHONY: dev-db stop-db clean-db run test client
+.PHONY: dev-db stop-db clean-db run test client prod-up prod-down
 
 dev-db:
 	$(MAKE) -C server dev-db
@@ -17,3 +17,9 @@ test:
 
 client:
 	cd client && npm run dev
+
+prod-up:
+	docker compose -f docker-compose.prod.yml up -d --build
+
+prod-down:
+	docker compose -f docker-compose.prod.yml down

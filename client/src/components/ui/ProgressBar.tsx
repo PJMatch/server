@@ -1,15 +1,10 @@
 interface ProgressBarProps {
-  /** Current progress value (0–100) */
   value: number;
-  /** Maximum value – defaults to 100 */
   max?: number;
-  /** Visual size */
   size?: 'sm' | 'md' | 'lg';
-  /** Color variant of the filled bar */
-  color?: 'primary' | 'accent' | 'success';
-  /** Optional label rendered above the bar */
+  color?: 'primary' | 'accent' | 'success' | 'danger';
+  orientation?: 'horizontal' | 'vertical';
   label?: string;
-  /** Show the percentage text */
   showPercent?: boolean;
   className?: string;
 }
@@ -20,10 +15,17 @@ const sizeClasses: Record<string, string> = {
   lg: 'h-6 rounded-xl',
 };
 
+const sizeClassesVertical: Record<string, string> = {
+  sm: 'w-2.5 rounded-md',
+  md: 'w-4.5 rounded-lg',
+  lg: 'w-6 rounded-xl',
+};
+
 const colorClasses: Record<string, string> = {
   primary: 'bg-blue-900',
   accent: 'bg-[#fca55d]',
   success: 'bg-green-600',
+  danger: 'bg-red-600',
 };
 
 export default function ProgressBar({
@@ -31,11 +33,50 @@ export default function ProgressBar({
   max = 100,
   size = 'md',
   color = 'primary',
+  orientation = 'horizontal',
   label,
   showPercent = false,
   className = '',
 }: ProgressBarProps) {
   const percent = Math.min(100, Math.max(0, (value / max) * 100));
+
+  if (orientation === 'vertical') {
+    return (
+      <div className={`flex flex-col items-center h-full ${className}`}>
+        {(label || showPercent) && (
+          <div className="flex flex-col items-center mb-1 flex-shrink-0">
+            {showPercent && (
+              <span className="text-xs font-bold text-blue-900">
+                {Math.round(percent)}%
+              </span>
+            )}
+            {label && (
+              <span className="text-xs font-bold text-blue-900">{label}</span>
+            )}
+          </div>
+        )}
+        <div
+          className={`
+            h-full bg-blue-100 border-2 border-blue-900 overflow-hidden flex flex-col justify-end
+            ${sizeClassesVertical[size]}
+          `}
+          role="progressbar"
+          aria-valuenow={value}
+          aria-valuemin={0}
+          aria-valuemax={max}
+          aria-label={label}
+        >
+          <div
+            className={`
+              w-full transition-all duration-300 ease-out
+              ${colorClasses[color]}
+            `}
+            style={{ height: `${percent}%` }}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`flex flex-col gap-1.5 ${className}`}>

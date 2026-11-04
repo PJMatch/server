@@ -1,19 +1,19 @@
-.PHONY: dev-db stop-db clean-db run
+.PHONY: dev-db stop-db clean-db run test client
 
-# Starts the database and adminer containers in the background
 dev-db:
-	docker-compose -f docker-compose.dev.yml up -d
+	$(MAKE) -C server dev-db
 
-# Stops the running containers
 stop-db:
-	docker-compose -f docker-compose.dev.yml down
+	$(MAKE) -C server stop-db
 
-# Stops containers and removes the persistent volume (wipes the database)
 clean-db:
-	docker-compose -f docker-compose.dev.yml down -v
+	$(MAKE) -C server clean-db
 
-# Placeholder for running the Go backend server
 run:
-	@echo "Starting local database..."
-	make dev-db
-	@echo "Ready to run Go server (command will be added here later)"
+	$(MAKE) -C server run
+
+test:
+	$(MAKE) -C server test
+
+client:
+	cd client && npm run dev

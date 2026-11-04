@@ -1,0 +1,7 @@
+bin
+storage
+.env
+.env.*
+!.env.example
+.git
+

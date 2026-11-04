@@ -1,0 +1,68 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: pjmatch_postgres_prod
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER:-pjmatch_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-pjmatch_prod_password}
+      POSTGRES_DB: ${DB_NAME:-pjmatch_prod}
+    volumes:
+      - pgdata_prod:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-pjmatch_user} -d ${DB_NAME:-pjmatch_prod}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - pjmatch_net
+
+  backend:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: pjmatch_backend_prod
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-pjmatch_user}
+      DB_PASSWORD: ${DB_PASSWORD:-pjmatch_prod_password}
+      DB_NAME: ${DB_NAME:-pjmatch_prod}
+      PORT: 8080
+      GIN_MODE: release
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-change-me-access-secret-prod}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change-me-refresh-secret-prod}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost,http://localhost:80}
+      SIGNS_SEED_FILE: /app/internal/database/signs.json
+    volumes:
+      # Persistent volume for uploaded skeleton JSON packages
+      - ./storage:/app/storage
+    networks:
+      - pjmatch_net
+
+  frontend:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: pjmatch_frontend_prod
+    restart: always
+    depends_on:
+      backend:
+        condition: service_started
+    ports:
+      - "80:80"
+    networks:
+      - pjmatch_net
+
+volumes:
+  pgdata_prod:
+    name: pjmatch_pgdata_prod
+
+networks:
+  pjmatch_net:
+    name: pjmatch_prod_network
+

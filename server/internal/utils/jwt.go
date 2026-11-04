@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 )
 
 const (
@@ -29,7 +30,7 @@ const (
 var ErrInvalidToken = errors.New("invalid token")
 
 type Claims struct {
-	UserID     uint       `json:"user_id"`
+	UserID     uuid.UUID  `json:"user_id"`
 	Username   string     `json:"username"`
 	ClientType ClientType `json:"client_type"`
 	TokenType  TokenType  `json:"token_type"`
@@ -52,11 +53,15 @@ func NewJWTManager(accessSecret, refreshSecret string) *JWTManager {
 	}
 }
 
-func (m *JWTManager) GenerateAccessToken(userID uint, username string, client ClientType) (string, error) {
+func (m *JWTManager) AccessTTL() time.Duration {
+	return m.accessTTL
+}
+
+func (m *JWTManager) GenerateAccessToken(userID uuid.UUID, username string, client ClientType) (string, error) {
 	return m.generate(userID, username, client, TokenAccess, m.accessSecret, m.accessTTL)
 }
 
-func (m *JWTManager) GenerateRefreshToken(userID uint, username string, client ClientType) (string, error) {
+func (m *JWTManager) GenerateRefreshToken(userID uuid.UUID, username string, client ClientType) (string, error) {
 	return m.generate(userID, username, client, TokenRefresh, m.refreshSecret, m.refreshTTL)
 }
 
@@ -68,7 +73,7 @@ func (m *JWTManager) ParseRefreshToken(tokenStr string) (*Claims, error) {
 	return m.parse(tokenStr, TokenRefresh, m.refreshSecret)
 }
 
-func (m *JWTManager) generate(userID uint, username string, client ClientType, tokenType TokenType, secret []byte, ttl time.Duration) (string, error) {
+func (m *JWTManager) generate(userID uuid.UUID, username string, client ClientType, tokenType TokenType, secret []byte, ttl time.Duration) (string, error) {
 	now := time.Now()
 	claims := Claims{
 		UserID:     userID,

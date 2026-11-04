@@ -150,8 +150,7 @@ export default function LoginPage() {
 
         <Card variant="flat" className="w-full">
           <p className="text-xl font-bold leading-relaxed text-blue-900">
-            Witaj na stronie internetowej PJMatch, projektu studentów
-            wydziału ETI Politechniki Gdańskiej!
+            Witaj na stronie PJMatch
           </p>
         </Card>
       </div>

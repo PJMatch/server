@@ -557,3 +557,124 @@ export function normalizeKeypointsSequence(sequence: FrameKeypoints[]): {
     center: { x: fallbackCenterX, y: fallbackCenterY, z: fallbackCenterZ }
   };
 }
+
+export interface QualityMetrics {
+  shoulders: number;
+  face: number;
+  hands: number;
+  distance: number;
+  status: 'READY' | 'GOOD' | 'NEEDS_IMPROVEMENT';
+  statusLabel: 'GOTOWE DO PRZESŁANIA' | 'DOBRE' | 'WYMAGA POPRAWY';
+  statusColor: 'success' | 'accent' | 'danger';
+}
+
+export function calculateQualityMetrics(sequence: FrameKeypoints[]): QualityMetrics {
+  if (!sequence || sequence.length === 0) {
+    return {
+      shoulders: 0,
+      face: 0,
+      hands: 0,
+      distance: 0,
+      status: 'NEEDS_IMPROVEMENT',
+      statusLabel: 'WYMAGA POPRAWY',
+      statusColor: 'danger'
+    };
+  }
+
+  const totalFrames = sequence.length;
+  let validShoulders = 0;
+  let validFace = 0;
+  let validHands = 0;
+  let validDistance = 0;
+
+  for (const frame of sequence) {
+    if (frame.pose && frame.pose.length >= 3) {
+      const left = frame.pose[1];
+      const right = frame.pose[2];
+      if (
+        left &&
+        right &&
+        left[3] >= 0.4 &&
+        right[3] >= 0.4 &&
+        (left[0] !== 0 || left[1] !== 0) &&
+        (right[0] !== 0 || right[1] !== 0)
+      ) {
+        validShoulders++;
+      }
+    }
+
+    const hasFaceMesh =
+      frame.face &&
+      frame.face.length > 0 &&
+      frame.face.some((p) => p[0] !== 0 || p[1] !== 0);
+    const hasNose =
+      frame.pose &&
+      frame.pose.length > 0 &&
+      frame.pose[0] &&
+      frame.pose[0][3] >= 0.4 &&
+      (frame.pose[0][0] !== 0 || frame.pose[0][1] !== 0);
+
+    if (hasFaceMesh || hasNose) {
+      validFace++;
+    }
+
+    const hasLh =
+      frame.lh &&
+      frame.lh.length === 21 &&
+      frame.lh.some((p) => p[0] !== 0 || p[1] !== 0);
+    const hasRh =
+      frame.rh &&
+      frame.rh.length === 21 &&
+      frame.rh.some((p) => p[0] !== 0 || p[1] !== 0);
+
+    if (hasLh || hasRh) {
+      validHands++;
+    }
+
+    if (frame.pose && frame.pose.length >= 9) {
+      const leftHip = frame.pose[7];
+      const rightHip = frame.pose[8];
+      const hasLeftHip =
+        leftHip && leftHip[3] >= 0.3 && (leftHip[0] !== 0 || leftHip[1] !== 0);
+      const hasRightHip =
+        rightHip && rightHip[3] >= 0.3 && (rightHip[0] !== 0 || rightHip[1] !== 0);
+
+      if (hasLeftHip || hasRightHip) {
+        validDistance++;
+      }
+    }
+  }
+
+  const shoulders = Math.min(100, Math.round((validShoulders / totalFrames) * 100));
+  const face = Math.min(100, Math.round((validFace / totalFrames) * 100));
+  const hands = Math.min(100, Math.round((validHands / totalFrames) * 100));
+  const distance = Math.min(100, Math.round((validDistance / totalFrames) * 100));
+
+  let status: 'READY' | 'GOOD' | 'NEEDS_IMPROVEMENT';
+  let statusLabel: 'GOTOWE DO PRZESŁANIA' | 'DOBRE' | 'WYMAGA POPRAWY';
+  let statusColor: 'success' | 'accent' | 'danger';
+
+  if (shoulders >= 85 && face >= 80 && hands >= 75 && distance >= 60) {
+    status = 'READY';
+    statusLabel = 'GOTOWE DO PRZESŁANIA';
+    statusColor = 'success';
+  } else if (shoulders >= 70 && face >= 65 && hands >= 50 && distance >= 40) {
+    status = 'GOOD';
+    statusLabel = 'DOBRE';
+    statusColor = 'accent';
+  } else {
+    status = 'NEEDS_IMPROVEMENT';
+    statusLabel = 'WYMAGA POPRAWY';
+    statusColor = 'danger';
+  }
+
+  return {
+    shoulders,
+    face,
+    hands,
+    distance,
+    status,
+    statusLabel,
+    statusColor
+  };
+}

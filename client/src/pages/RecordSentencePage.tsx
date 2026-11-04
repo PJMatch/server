@@ -4,8 +4,10 @@ import {
   extractVideoKeypoints,
   drawSkeletonOverlay,
   normalizeKeypointsSequence,
+  calculateQualityMetrics,
   type FrameKeypoints,
-  type ExtractionProgress
+  type ExtractionProgress,
+  type QualityMetrics
 } from "../services/mediapipe";
 import {
   SENTENCES,
@@ -21,6 +23,7 @@ import {
   type RecordingStatus
 } from "../components/record/VideoViewport";
 import { TimelineScrubber } from "../components/record/TimelineScrubber";
+import { QualityMetricsCard } from "../components/record/QualityMetricsCard";
 import { useCameraRecorder } from "../hooks/useCameraRecorder";
 import { useVideoSync } from "../hooks/useVideoSync";
 
@@ -57,6 +60,7 @@ export default function RecordSentencePage() {
   const [showSkeleton, setShowSkeleton] = useState<boolean>(true);
   const [isVerifying, setIsVerifying] = useState<boolean>(false);
   const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
+  const [qualityMetrics, setQualityMetrics] = useState<QualityMetrics | null>(null);
 
   const isExpanded = status !== 'IDLE';
 
@@ -64,6 +68,7 @@ export default function RecordSentencePage() {
     setExtractedKeypoints(null);
     setRawKeypoints(null);
     rawKeypointsRef.current = null;
+    setQualityMetrics(null);
     setIsVerifying(false);
     setIsSubmitted(false);
     setStatus('ANNOTATING');
@@ -202,6 +207,7 @@ export default function RecordSentencePage() {
     setExtractedKeypoints(null);
     setRawKeypoints(null);
     rawKeypointsRef.current = null;
+    setQualityMetrics(null);
     setIsVerifying(false);
     setIsSubmitted(false);
     setIsPlaying(false);
@@ -239,6 +245,7 @@ export default function RecordSentencePage() {
     setExtractedKeypoints(null);
     setRawKeypoints(null);
     rawKeypointsRef.current = null;
+    setQualityMetrics(null);
     setIsVerifying(false);
     setIsSubmitted(false);
     updateSkeletonCanvas(newStart);
@@ -253,6 +260,7 @@ export default function RecordSentencePage() {
     setExtractedKeypoints(null);
     setRawKeypoints(null);
     rawKeypointsRef.current = null;
+    setQualityMetrics(null);
     setIsVerifying(false);
     setIsSubmitted(false);
     updateSkeletonCanvas(newEnd);
@@ -313,6 +321,8 @@ export default function RecordSentencePage() {
 
       if (!abortSignalRef.current.aborted) {
         const { normalized } = normalizeKeypointsSequence(keypoints);
+        const metrics = calculateQualityMetrics(keypoints);
+        setQualityMetrics(metrics);
         setRawKeypoints(keypoints);
         rawKeypointsRef.current = keypoints;
         setExtractedKeypoints(normalized);
@@ -348,6 +358,7 @@ export default function RecordSentencePage() {
     setIsVerifying(false);
     setIsSubmitted(false);
   };
+  void handleEditAnnotation;
 
   const handleCancelExtraction = () => {
     abortSignalRef.current.aborted = true;
@@ -369,7 +380,8 @@ export default function RecordSentencePage() {
     fps: 30,
     glosses: finalAnnotationList,
     keypoints: extractedKeypoints || [],
-    keypoints_raw: rawKeypoints || []
+    keypoints_raw: rawKeypoints || [],
+    quality_metrics: qualityMetrics
   };
 
   const handleDownloadJson = () => {
@@ -413,60 +425,67 @@ export default function RecordSentencePage() {
           isExpanded={isExpanded}
         />
 
-        <VideoViewport
-          videoRef={videoRef}
-          skeletonCanvasRef={skeletonCanvasRef}
-          status={status}
-          countdown={countdown}
-          isExpanded={isExpanded}
-          showSkeleton={showSkeleton}
-          isVerifying={isVerifying}
-          isSubmitted={isSubmitted}
-          isExtracting={isExtracting}
-          extractionProgress={extractionProgress}
-          onCancelExtraction={handleCancelExtraction}
-          onTimeUpdate={() => {
-            if (!isScrubbing && videoRef.current && !isExtracting && !isPlaying) {
-              const curr = videoRef.current.currentTime;
-              if (trimEnd > 0 && curr >= trimEnd) {
-                videoRef.current.currentTime = trimStart;
-                setCurrentTime(trimStart);
-                updateSkeletonCanvas(trimStart);
-              } else {
-                setCurrentTime(curr);
-                updateSkeletonCanvas(curr);
-              }
-            }
-          }}
-          onLoadedMetadata={() => {
-            if (videoRef.current) {
-              const dur = videoRef.current.duration || 0;
-              setDuration(dur);
-              setTrimStart(0);
-              setTrimEnd(dur);
-              setCurrentTime(0);
-
-              if (skeletonCanvasRef.current) {
-                skeletonCanvasRef.current.width = videoRef.current.videoWidth || 1080;
-                skeletonCanvasRef.current.height = videoRef.current.videoHeight || 1080;
-              }
-
-              const numGlosses = currentGlosses.length;
-              if (numGlosses > 1 && dur > 0) {
-                const initialMarkers: number[] = [];
-                for (let i = 1; i < numGlosses; i++) {
-                  initialMarkers.push((i / numGlosses) * dur);
+        <div className="flex flex-row items-center justify-center w-full transition-all duration-500 ease-in-out">
+          <VideoViewport
+            videoRef={videoRef}
+            skeletonCanvasRef={skeletonCanvasRef}
+            status={status}
+            countdown={countdown}
+            isExpanded={isExpanded}
+            showSkeleton={showSkeleton}
+            isVerifying={isVerifying}
+            isSubmitted={isSubmitted}
+            isExtracting={isExtracting}
+            extractionProgress={extractionProgress}
+            onCancelExtraction={handleCancelExtraction}
+            onTimeUpdate={() => {
+              if (!isScrubbing && videoRef.current && !isExtracting && !isPlaying) {
+                const curr = videoRef.current.currentTime;
+                if (trimEnd > 0 && curr >= trimEnd) {
+                  videoRef.current.currentTime = trimStart;
+                  setCurrentTime(trimStart);
+                  updateSkeletonCanvas(trimStart);
+                } else {
+                  setCurrentTime(curr);
+                  updateSkeletonCanvas(curr);
                 }
-                setGlossMarkers(initialMarkers);
-              } else {
-                setGlossMarkers([]);
               }
-            }
-          }}
-          onPlay={() => setIsPlaying(true)}
-          onPause={() => setIsPlaying(false)}
-          onEnded={() => setIsPlaying(false)}
-        />
+            }}
+            onLoadedMetadata={() => {
+              if (videoRef.current) {
+                const dur = videoRef.current.duration || 0;
+                setDuration(dur);
+                setTrimStart(0);
+                setTrimEnd(dur);
+                setCurrentTime(0);
+
+                if (skeletonCanvasRef.current) {
+                  skeletonCanvasRef.current.width = videoRef.current.videoWidth || 1080;
+                  skeletonCanvasRef.current.height = videoRef.current.videoHeight || 1080;
+                }
+
+                const numGlosses = currentGlosses.length;
+                if (numGlosses > 1 && dur > 0) {
+                  const initialMarkers: number[] = [];
+                  for (let i = 1; i < numGlosses; i++) {
+                    initialMarkers.push((i / numGlosses) * dur);
+                  }
+                  setGlossMarkers(initialMarkers);
+                } else {
+                  setGlossMarkers([]);
+                }
+              }
+            }}
+            onPlay={() => setIsPlaying(true)}
+            onPause={() => setIsPlaying(false)}
+            onEnded={() => setIsPlaying(false)}
+          />
+
+          <QualityMetricsCard
+            metrics={qualityMetrics}
+            isVisible={isVerifying}
+          />
+        </div>
 
         <div className="flex-shrink-0 mt-2.5 w-full max-w-3xl flex flex-col items-center">
           {status === 'IDLE' && (

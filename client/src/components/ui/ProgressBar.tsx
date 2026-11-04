@@ -6,7 +6,7 @@ interface ProgressBarProps {
   /** Visual size */
   size?: 'sm' | 'md' | 'lg';
   /** Color variant of the filled bar */
-  color?: 'primary' | 'accent' | 'success';
+  color?: 'primary' | 'accent' | 'success' | 'danger';
   /** Optional label rendered above the bar */
   label?: string;
   /** Show the percentage text */
@@ -24,6 +24,7 @@ const colorClasses: Record<string, string> = {
   primary: 'bg-blue-900',
   accent: 'bg-[#fca55d]',
   success: 'bg-green-600',
+  danger: 'bg-red-600',
 };
 
 export default function ProgressBar({

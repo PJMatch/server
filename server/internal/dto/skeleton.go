@@ -88,6 +88,7 @@ type SkeletonFrame struct {
 }
 
 type UploadSkeletonRequest struct {
+	SignSlug          string            `json:"sign_slug" binding:"required"`
 	RecordedCorrectly bool              `json:"recorded_correctly"`
 	PersonID          string            `json:"person_id" binding:"required"`
 	SentenceID        string            `json:"sentence_id" binding:"required"`

@@ -120,6 +120,7 @@ func migrate(db *gorm.DB) error {
 		&models.User{},
 		&models.Sign{},
 		&models.Skeleton{},
+		&models.UserProgress{},
 	)
 }
 
@@ -147,7 +148,17 @@ func (a *App) setupRoutes() {
 	userRepo := repositories.NewUserRepository(a.DB)
 	userService := services.NewUserService(userRepo, a.JWT)
 	authLimiter := middleware.NewRateLimiter(6*time.Second, 10)
-	handlers.NewUserHandler(userService).RegisterRoutes(api, middleware.AuthMiddleware(a.JWT), authLimiter.Middleware())
+	requireAuth := middleware.AuthMiddleware(a.JWT)
+	handlers.NewUserHandler(userService).RegisterRoutes(api, requireAuth, authLimiter.Middleware())
+
+	signRepo := repositories.NewSignRepository(a.DB)
+	skeletonRepo := repositories.NewSkeletonRepository(a.DB)
+	progressRepo := repositories.NewProgressRepository(a.DB)
+	storage := services.NewStorageService(getEnv("STORAGE_DIR", "storage"))
+
+	handlers.NewSignHandler(services.NewSignService(signRepo)).RegisterRoutes(api)
+	handlers.NewSkeletonHandler(services.NewSkeletonService(skeletonRepo, signRepo, storage)).RegisterRoutes(api, requireAuth)
+	handlers.NewProgressHandler(services.NewProgressService(progressRepo, signRepo)).RegisterRoutes(api, requireAuth)
 }
 
 func (a *App) health(c *gin.Context) {

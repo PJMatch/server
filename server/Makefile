@@ -12,10 +12,8 @@ stop-db:
 clean-db:
 	docker-compose -f docker-compose.dev.yml down -v
 
-# Starts the local database and runs the Go backend server
 run: dev-db
 	go run ./cmd
 
-# Runs unit tests
 test:
-	go test ./internal/utils/...
+	go test ./...

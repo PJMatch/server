@@ -12,7 +12,12 @@ import (
 	"time"
 
 	"github.com/PJMatch/server/internal/database"
+	"github.com/PJMatch/server/internal/handlers"
+	"github.com/PJMatch/server/internal/middleware"
 	"github.com/PJMatch/server/internal/models"
+	"github.com/PJMatch/server/internal/repositories"
+	"github.com/PJMatch/server/internal/services"
+	"github.com/PJMatch/server/internal/utils"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -20,18 +25,23 @@ import (
 	"gorm.io/gorm"
 )
 
-// Skeleton packages sent from the browser can be large (many frames x 75 landmarks).
 const maxBodySize = 50 << 20
 
 type App struct {
 	Router *gin.Engine
 	DB     *gorm.DB
+	JWT    *utils.JWTManager
 	port   string
 }
 
 func New() (*App, error) {
 	if err := godotenv.Load(filepath.Join(serverRoot(), ".env")); err != nil {
 		log.Println("no .env file found, using system environment")
+	}
+
+	accessSecret, refreshSecret := os.Getenv("JWT_ACCESS_SECRET"), os.Getenv("JWT_REFRESH_SECRET")
+	if accessSecret == "" || refreshSecret == "" {
+		return nil, fmt.Errorf("JWT_ACCESS_SECRET and JWT_REFRESH_SECRET must be set")
 	}
 
 	db, err := connectDB()
@@ -55,9 +65,15 @@ func New() (*App, error) {
 		log.Printf("[Seeder Warning] %v", err)
 	}
 
+	router, err := newRouter()
+	if err != nil {
+		return nil, err
+	}
+
 	a := &App{
-		Router: gin.Default(),
+		Router: router,
 		DB:     db,
+		JWT:    utils.NewJWTManager(accessSecret, refreshSecret),
 		port:   getEnv("PORT", "8080"),
 	}
 	a.setupMiddleware()
@@ -68,6 +84,18 @@ func New() (*App, error) {
 
 func (a *App) Run() error {
 	return a.Router.Run(":" + a.port)
+}
+
+func newRouter() (*gin.Engine, error) {
+	gin.SetMode(getEnv("GIN_MODE", gin.DebugMode))
+
+	router := gin.New()
+	router.Use(middleware.Logger(), gin.Recovery())
+
+	if err := router.SetTrustedProxies(splitList(os.Getenv("TRUSTED_PROXIES"))); err != nil {
+		return nil, fmt.Errorf("trusted proxies: %w", err)
+	}
+	return router, nil
 }
 
 func connectDB() (*gorm.DB, error) {
@@ -104,7 +132,7 @@ func (a *App) setupMiddleware() {
 	})
 
 	a.Router.Use(cors.New(cors.Config{
-		AllowOrigins:     strings.Split(getEnv("CORS_ALLOWED_ORIGINS", "http://localhost:5173"), ","),
+		AllowOrigins:     splitList(getEnv("CORS_ALLOWED_ORIGINS", "http://localhost:5173")),
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		AllowCredentials: true,
@@ -115,6 +143,11 @@ func (a *App) setupMiddleware() {
 func (a *App) setupRoutes() {
 	api := a.Router.Group("/api/v1")
 	api.GET("/health", a.health)
+
+	userRepo := repositories.NewUserRepository(a.DB)
+	userService := services.NewUserService(userRepo, a.JWT)
+	authLimiter := middleware.NewRateLimiter(6*time.Second, 10)
+	handlers.NewUserHandler(userService).RegisterRoutes(api, middleware.AuthMiddleware(a.JWT), authLimiter.Middleware())
 }
 
 func (a *App) health(c *gin.Context) {
@@ -138,6 +171,16 @@ func serverRoot() string {
 		return "."
 	}
 	return filepath.Dir(filepath.Dir(filepath.Dir(file)))
+}
+
+func splitList(value string) []string {
+	var items []string
+	for _, item := range strings.Split(value, ",") {
+		if item = strings.TrimSpace(item); item != "" {
+			items = append(items, item)
+		}
+	}
+	return items
 }
 
 func getEnv(key, fallback string) string {

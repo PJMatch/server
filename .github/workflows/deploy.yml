@@ -1,0 +1,39 @@
+name: deploy
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: upload and run
+        env:
+          HOST: ${{ secrets.VPS_HOST }}
+          PORT: ${{ secrets.VPS_PORT }}
+          USER: ${{ secrets.VPS_USER }}
+          KEY: ${{ secrets.VPS_SSH_KEY }}
+          DEST: ${{ secrets.VPS_PATH }}
+        run: |
+          test -n "$HOST" && test -n "$USER" && test -n "$KEY" && test -n "$DEST"
+          PORT="${PORT:-22}"
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/id
+          chmod 600 ~/.ssh/id
+          ssh-keyscan -p "$PORT" -H "$HOST" >> ~/.ssh/known_hosts
+          SSH="ssh -i ~/.ssh/id -p $PORT -o IdentitiesOnly=yes"
+          $SSH "$USER@$HOST" "mkdir -p '$DEST'"
+          rsync -az --delete \
+            --exclude .git \
+            --exclude .env \
+            --exclude storage \
+            -e "$SSH" \
+            ./ "$USER@$HOST:$DEST/"
+          $SSH "$USER@$HOST" "cd '$DEST' && docker compose -f docker-compose.prod.yml up -d --build"

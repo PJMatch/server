@@ -57,15 +57,15 @@ export function SentenceBanner({
       variant="flat"
       noPadding
       className={`w-full transition-all duration-500 ease-in-out overflow-hidden flex-shrink-0 ${
-        isExpanded
-          ? 'max-h-20 opacity-100 mb-2 py-1.5 px-4 max-w-3xl'
-          : 'max-h-0 opacity-0 mb-0 py-0 px-0 pointer-events-none'
+      isExpanded
+        ? 'max-h-28 opacity-100 mb-2 py-2 px-4 max-w-3xl'
+        : 'max-h-0 opacity-0 mb-0 py-0 px-0 pointer-events-none'
       }`}
     >
-      <p className="text-sm sm:text-base text-center font-black tracking-tight leading-tight">
+      <p className="text-lg sm:text-xl text-center font-black tracking-tight leading-tight">
         „{selectedSentence}”
       </p>
-      <p className="text-xs sm:text-sm text-center font-black tracking-tight text-blue-900/70 mt-0.5">
+      <p className="text-base sm:text-lg text-center font-black tracking-tight text-blue-900/70 mt-1">
         „{glossesText}”
       </p>
     </Card>

@@ -14,8 +14,23 @@ function IconCamera() {
 
 function IconBrain() {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-7 h-7">
-      <path d="M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 0 1-.383-.218 25.18 25.18 0 0 1-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0 1 12 5.052 5.5 5.5 0 0 1 16.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 0 1-4.244 3.17 15.247 15.247 0 0 1-.383.219l-.022.012-.007.004-.003.001a.752.752 0 0 1-.704 0l-.003-.001Z" />
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="w-7 h-7"
+    >
+      <path d="M12 4.5a3 3 0 0 0-5.8-1A3.5 3.5 0 0 0 3 7a3.5 3.5 0 0 0 0 6 3.5 3.5 0 0 0 3.2 5.5A3 3 0 0 0 12 19.5Z" />
+      <path d="M12 4.5a3 3 0 0 1 5.8-1A3.5 3.5 0 0 1 21 7a3.5 3.5 0 0 1 0 6 3.5 3.5 0 0 1-3.2 5.5 3 3 0 0 1-5.8 1Z" />
+      <path d="M12 4.5v15" />
+      <path d="M8 7.5c1.5 0 2 1 2 2.5" />
+      <path d="M6 13c1.5-.5 3 .5 3 2" />
+      <path d="M16 7.5c-1.5 0-2 1-2 2.5" />
+      <path d="M18 13c-1.5-.5-3 .5-3 2" />
     </svg>
   );
 }
@@ -82,13 +97,13 @@ export default function HomePage() {
                 PJMatch
               </h1>
               <p className="mt-4 text-xl font-black text-blue-900/40 tracking-tight uppercase">
-                Projekt tłumacza Polskiego Języka Migowego
+                Tłumacza Polskiego Języka Migowego
               </p>
             </div>
 
             <p className="text-lg font-medium text-blue-900/70 leading-relaxed max-w-md">
               <span className="bg-blue-900/5 text-blue-900/40 italic px-1 rounded">
-                Jeśli kiedyś myślałeś o starcie z migowym, to trafiłeś w idealne miejsce. (Kiedyś tutaj ładniejszy tekst)
+                Jeśli chcesz pomóc w walce z wykluczeniem społecznym osób g/Głuchych, to trafiłeś w idealne miejsce. 
               </span>
             </p>
           </div>
@@ -125,34 +140,34 @@ export default function HomePage() {
               number={1}
               icon={<IconCamera />}
               title="Rozpocznij nagrywanie"
-              description="Wybierz słowo lub zdanie, które chciałbyś się nauczyć"
+              description="Wybierz zdanie, które chcesz nagrać"
             />
             <Step
               number={2}
               icon={<IconBrain />}
               title="Ekstrakcja szkieletu"
-              description="Twoje nagranie zostaje przerobione na zbiór punktów przy użyciu Mediapipe, które posłuży do analizy"
+              description="Twoje nagranie zostaje przetworzone na zbiór punktów przy użyciu narzędzia Mediapipe, które posłużą do budowy zbioru uczącego"
               accent
             />
             <Step
               number={3}
               icon={<IconUpload />}
-              title="Analiza wideo"
-              description="Nasza wyuczona sieć porównuje Twoje migi do wcześniej już nauczonych się danych"
+              title="Przesłanie danych"
+              description="Twoje przetworzone nagranie trafia do zbioru danych uczących, które posłużą do nauki sieci neuronowej"
             />
             <Step
               number={4}
               icon={<IconChartBar />}
-              title="Wyniki i statystyki"
-              description="Dostajesz zwrotną informację, na ile poprawnie wykonałeś znak i co możesz mieć do poprawy"
+              title="Trening AI"
+              description="Dane zostaną użyte do treingu tłumacza AI, który pozwoli zmniejszać wykluczenie społeczne osób g/Głuchych"
             />
           </div>
 
           <div className="flex items-start gap-4 bg-blue-900 rounded-2xl border-4 border-blue-900 px-8 py-6 shadow-[8px_8px_0px_0px_rgba(252,165,93,1)]">
             <span className="text-3xl flex-shrink-0 mt-0.5">🛡️</span>
             <p className="text-white font-semibold text-base leading-relaxed">
-              Ekstrakcja szkieletu przy użyciu Mediapipe odbywa się całkowicie lokalnie na Twoim urządzeniu.
-              Twój wizerunek w żaden sposób nie jest zapisywany i jest w pełni bezpieczny.
+              Ekstrakcja szkieletu przy użyciu narzędzia Mediapipe odbywa się w pełni na Twoim urządzeniu.
+              Twój wizerunek w żaden sposób nie jest zapisywany i jest w pełni bezpieczny
             </p>
           </div>
 
@@ -178,11 +193,8 @@ export default function HomePage() {
           <div className="bg-white border-4 border-blue-900 rounded-2xl p-10 shadow-[6px_6px_0px_0px_rgba(30,58,138,1)]">
             <p className="text-blue-900/40 italic text-lg font-medium leading-relaxed text-center">
               Jesteśmy grupą studentów z Politechniki Gdańskiej na Wydziale Elektroniki, Telekomunikacji i Informatyki. 
-              Pracę na PJMatch zaczęliśmy ponad pół roku temu. Od tamtego czasu udało się nam współpracować z Polskim Związkiem Głuchych oraz niezależnymi wolontariuszami, którzy wykorzystali tą okazję do sprawdzenia własnych umiejętności. 
-              Od tamtego czasu udało zebrać się ponad 5000 nagrań, które posłużyły do nauczenia sieci. <br/><br/>
-
-              Wierzymy, że godziny które zostały włożone w ten projekt, będą w stanie komuś realnie pomóc.
-              
+              Pracę nad PJMatch zaczęliśmy ponad pół roku temu. Od tamtego czasu udało się nam nawiązać współpracę z Polskim Związkiem Głuchych oraz niezależnymi wolontariuszami, którzy wykorzystali tę okazję do sprawdzenia własnych umiejętności. 
+              Od tamtego czasu udało zebrać się ponad 5000 nagrań, które posłużyły do nauczenia sieci neuronowej. 
             </p>
           </div>
 

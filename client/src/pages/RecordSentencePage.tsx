@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Button, Card } from "../components/ui";
+import api from "../services/api";
+import { useAuth } from "../context/AuthContext";
 import {
   extractVideoKeypoints,
   drawSkeletonOverlay,
@@ -55,14 +57,23 @@ export default function RecordSentencePage() {
 
   const [extractedKeypoints, setExtractedKeypoints] = useState<FrameKeypoints[] | null>(null);
   const [rawKeypoints, setRawKeypoints] = useState<FrameKeypoints[] | null>(null);
+  const { user } = useAuth();
   const [isExtracting, setIsExtracting] = useState<boolean>(false);
   const [extractionProgress, setExtractionProgress] = useState<ExtractionProgress | null>(null);
   const [showSkeleton, setShowSkeleton] = useState<boolean>(true);
   const [isVerifying, setIsVerifying] = useState<boolean>(false);
   const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [qualityMetrics, setQualityMetrics] = useState<QualityMetrics | null>(null);
 
   const isExpanded = status !== 'IDLE';
+
+  const handleSentenceChange = (sentence: string) => {
+    setSelectedSentence(sentence);
+    setIsSubmitted(false);
+    setSubmitError(null);
+  };
 
   const handleRecordingComplete = useCallback(() => {
     setExtractedKeypoints(null);
@@ -71,6 +82,7 @@ export default function RecordSentencePage() {
     setQualityMetrics(null);
     setIsVerifying(false);
     setIsSubmitted(false);
+    setSubmitError(null);
     setStatus('ANNOTATING');
   }, []);
 
@@ -346,8 +358,81 @@ export default function RecordSentencePage() {
     }
   };
 
-  const handleAcceptAndSend = () => {
-    setIsSubmitted(true);
+  const calculatedAnnotations = currentGlosses.map((gloss, idx) => {
+    const endTime = idx < glossMarkers.length ? glossMarkers[idx] : trimEnd;
+    const frame = Math.round(Math.max(0, endTime - trimStart) * 30);
+    return [gloss, frame] as [string, number];
+  });
+  const eorFrame = Math.round(Math.max(0, trimEnd - trimStart) * 30);
+  const finalAnnotationList = [...calculatedAnnotations, ["EoR", eorFrame] as [string, number]];
+
+  const handleAcceptAndSend = async () => {
+    if (!extractedKeypoints || extractedKeypoints.length === 0 || isSubmitting) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      const frameCount = extractedKeypoints.length;
+      const formattedFrames = extractedKeypoints.map((fk, idx) => ({
+        frame_idx: idx,
+        body: fk.pose || [],
+        face: fk.face || [],
+        mouth: fk.mouth || [],
+        lh: fk.lh || [],
+        rh: fk.rh || []
+      }));
+
+      const formattedGlosses = finalAnnotationList.map(([gloss, frame]) => [
+        gloss,
+        Math.min(Math.max(0, frame), Math.max(0, frameCount - 1))
+      ]);
+
+      const width = videoRef.current?.videoWidth || 1080;
+      const height = videoRef.current?.videoHeight || 1080;
+
+      const payload = {
+        sign_slug: `sentence_${selectedSentenceIdx + 1}`,
+        recorded_correctly: qualityMetrics?.status !== 'NEEDS_IMPROVEMENT',
+        person_id: String(user?.id || user?.username || 'user'),
+        sentence_id: `sentence_${selectedSentenceIdx + 1}`,
+        recording_date: new Date().toISOString(),
+        sentence: selectedSentence,
+        glosses: formattedGlosses,
+        metadata: {
+          fps: 30,
+          frame_count: frameCount,
+          keypoints_count: 0,
+          source: 'webcam',
+          resolution: {
+            width,
+            height
+          }
+        },
+        frames: formattedFrames
+      };
+
+      try {
+        await api.post('/skeletons', payload);
+      } catch (err: unknown) {
+        const axiosErr = err as { response?: { status?: number } };
+        if (axiosErr?.response?.status === 404 && payload.sign_slug !== 'tmp_slug') {
+          await api.post('/skeletons', { ...payload, sign_slug: 'tmp_slug' });
+        } else {
+          throw err;
+        }
+      }
+
+      setIsSubmitted(true);
+    } catch (err: unknown) {
+      console.error('Błąd podczas wysyłania pakietu szkieletu:', err);
+      const axiosErr = err as { response?: { data?: { error?: string } } };
+      setSubmitError(axiosErr?.response?.data?.error || 'Wystąpił błąd podczas wysyłania nagrania.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleEditAnnotation = () => {
@@ -357,6 +442,7 @@ export default function RecordSentencePage() {
     }
     setIsVerifying(false);
     setIsSubmitted(false);
+    setSubmitError(null);
   };
   void handleEditAnnotation;
 
@@ -365,14 +451,6 @@ export default function RecordSentencePage() {
     setIsExtracting(false);
     setExtractionProgress(null);
   };
-
-  const calculatedAnnotations = currentGlosses.map((gloss, idx) => {
-    const endTime = idx < glossMarkers.length ? glossMarkers[idx] : trimEnd;
-    const frame = Math.round(Math.max(0, endTime - trimStart) * 30);
-    return [gloss, frame] as [string, number];
-  });
-  const eorFrame = Math.round(Math.max(0, trimEnd - trimStart) * 30);
-  const finalAnnotationList = [...calculatedAnnotations, ["EoR", eorFrame] as [string, number]];
 
   const finalJsonOutput = {
     recorded_correctly: true,
@@ -414,7 +492,7 @@ export default function RecordSentencePage() {
     >
       <SentenceSelectorCard
         selectedSentence={selectedSentence}
-        onSentenceChange={(sentence) => setSelectedSentence(sentence)}
+        onSentenceChange={handleSentenceChange}
         isExpanded={isExpanded}
       />
 
@@ -587,11 +665,15 @@ export default function RecordSentencePage() {
                         variant="primary"
                         size="sm"
                         onClick={handleAcceptAndSend}
-                        disabled={isExtracting || isSubmitted}
+                        disabled={isExtracting || isSubmitted || isSubmitting || !extractedKeypoints || extractedKeypoints.length === 0}
                         className={isSubmitted ? "!bg-emerald-600 !border-emerald-900 !text-white" : ""}
                       >
-                        {isSubmitted ? "Zatwierdzono do wysyłki" : "Akceptuj i wyślij"}
+                        {isSubmitting ? "Wysyłanie..." : isSubmitted ? "Wysłano pomyślnie" : "Akceptuj i wyślij"}
                       </Button>
+
+                      {submitError && (
+                        <span className="text-xs text-rose-500 font-medium self-center">{submitError}</span>
+                      )}
 
 
                       {/* <Button

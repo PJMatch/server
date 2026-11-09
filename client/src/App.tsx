@@ -28,6 +28,7 @@ export default function App() {
               <PageLayout>
                 <Routes>
                   <Route path="/logowanie" element={<LoginPage />} />
+                  <Route path="/rejestracja" element={<RegisterPage />} />
                   <Route path="/komponenty" element={<ComponentsPage />} />
                   <Route
                     path="/nagraj"

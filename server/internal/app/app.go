@@ -64,6 +64,9 @@ func New() (*App, error) {
 	if err := database.SeedSigns(db, seedPath); err != nil {
 		log.Printf("[Seeder Warning] %v", err)
 	}
+	if err := database.SeedSentences(db); err != nil {
+		log.Printf("[Seeder Warning] %v", err)
+	}
 
 	router, err := newRouter()
 	if err != nil {
@@ -121,6 +124,7 @@ func migrate(db *gorm.DB) error {
 		&models.Sign{},
 		&models.Skeleton{},
 		&models.UserProgress{},
+		&models.Sentence{},
 	)
 }
 

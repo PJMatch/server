@@ -65,6 +65,18 @@ func New() (*App, error) {
 		log.Printf("[Seeder Warning] %v", err)
 	}
 
+	refSeedPath := getEnv("REFERENCES_SEED_FILE", "internal/database/references.json")
+	if _, err := os.Stat(refSeedPath); err != nil {
+		if fallback := filepath.Join(serverRoot(), "internal", "database", "references.json"); fallback != refSeedPath {
+			if _, err := os.Stat(fallback); err == nil {
+				refSeedPath = fallback
+			}
+		}
+	}
+	if err := database.SeedReferences(db, refSeedPath); err != nil {
+		log.Printf("[Seeder Warning] %v", err)
+	}
+
 	router, err := newRouter()
 	if err != nil {
 		return nil, err
@@ -121,6 +133,7 @@ func migrate(db *gorm.DB) error {
 		&models.Sign{},
 		&models.Skeleton{},
 		&models.UserProgress{},
+		&models.ReferenceVideo{},
 	)
 }
 
@@ -154,11 +167,13 @@ func (a *App) setupRoutes() {
 	signRepo := repositories.NewSignRepository(a.DB)
 	skeletonRepo := repositories.NewSkeletonRepository(a.DB)
 	progressRepo := repositories.NewProgressRepository(a.DB)
+	referenceRepo := repositories.NewReferenceRepository(a.DB)
 	storage := services.NewStorageService(getEnv("STORAGE_DIR", "storage"))
 
 	handlers.NewSignHandler(services.NewSignService(signRepo)).RegisterRoutes(api)
 	handlers.NewSkeletonHandler(services.NewSkeletonService(skeletonRepo, signRepo, storage)).RegisterRoutes(api, requireAuth)
 	handlers.NewProgressHandler(services.NewProgressService(progressRepo, signRepo)).RegisterRoutes(api, requireAuth)
+	handlers.NewReferenceHandler(services.NewReferenceService(referenceRepo, storage)).RegisterRoutes(api)
 }
 
 func (a *App) health(c *gin.Context) {

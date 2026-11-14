@@ -11,6 +11,7 @@ import (
 
 type StorageService interface {
 	SaveSkeleton(signSlug string, userID, id uuid.UUID, data []byte) (string, error)
+	GetFilePath(relPath string) (string, error)
 	Delete(relPath string) error
 }
 
@@ -37,6 +38,26 @@ func (s *storageService) SaveSkeleton(signSlug string, userID, id uuid.UUID, dat
 		return "", err
 	}
 	return rel, nil
+}
+
+func (s *storageService) GetFilePath(relPath string) (string, error) {
+	rel := filepath.Clean(relPath)
+	if rel == "." || rel == "" || strings.HasPrefix(rel, "..") || filepath.IsAbs(rel) {
+		return "", fmt.Errorf("invalid file path")
+	}
+
+	full := filepath.Join(s.root, rel)
+	if _, err := os.Stat(full); err == nil {
+		return full, nil
+	}
+
+	// Fallback to ../<root>/<rel> if running from server subdirectory
+	alt := filepath.Join("..", s.root, rel)
+	if _, err := os.Stat(alt); err == nil {
+		return alt, nil
+	}
+
+	return "", os.ErrNotExist
 }
 
 func (s *storageService) Delete(relPath string) error {

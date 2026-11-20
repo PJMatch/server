@@ -27,6 +27,8 @@ func (h *UserHandler) RegisterRoutes(rg *gin.RouterGroup, requireAuth, rateLimit
 	auth.POST("/login/app", rateLimit, h.LoginApp)
 	auth.POST("/refresh-token", h.RefreshToken)
 	auth.GET("/me", requireAuth, h.Me)
+	auth.POST("/recover", rateLimit, h.Recover)
+	auth.POST("/recovery-keys", requireAuth, rateLimit, h.RegenerateRecoveryKeys)
 }
 
 func (h *UserHandler) Register(c *gin.Context) {
@@ -36,7 +38,7 @@ func (h *UserHandler) Register(c *gin.Context) {
 		return
 	}
 
-	user, err := h.service.Register(c.Request.Context(), req)
+	user, keys, err := h.service.Register(c.Request.Context(), req)
 	if errors.Is(err, services.ErrUsernameTaken) {
 		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
 		return
@@ -46,7 +48,7 @@ func (h *UserHandler) Register(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, dto.ToUserDTO(*user))
+	c.JSON(http.StatusCreated, dto.RegisterResponse{User: dto.ToUserDTO(*user), RecoveryKeys: keys})
 }
 
 func (h *UserHandler) LoginWeb(c *gin.Context) {
@@ -115,6 +117,61 @@ func (h *UserHandler) Me(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, dto.ToUserDTO(*user))
+}
+
+func (h *UserHandler) Recover(c *gin.Context) {
+	var req dto.RecoverRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "username and recovery_key are required"})
+		return
+	}
+
+	user, remaining, err := h.service.Recover(c.Request.Context(), req)
+	switch {
+	case errors.Is(err, services.ErrNothingToChange):
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	case errors.Is(err, services.ErrInvalidRecoveryKey):
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	case errors.Is(err, services.ErrUsernameTaken):
+		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		return
+	case err != nil:
+		internalError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.RecoverResponse{User: dto.ToUserDTO(*user), RecoveryKeysRemaining: remaining})
+}
+
+func (h *UserHandler) RegenerateRecoveryKeys(c *gin.Context) {
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	var req dto.RegenerateRecoveryKeysRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "password is required"})
+		return
+	}
+
+	keys, err := h.service.RegenerateRecoveryKeys(c.Request.Context(), userID, req.Password)
+	switch {
+	case errors.Is(err, services.ErrInvalidPassword):
+		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+		return
+	case errors.Is(err, services.ErrUserNotFound):
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	case err != nil:
+		internalError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.RecoveryKeysResponse{RecoveryKeys: keys})
 }
 
 func internalError(c *gin.Context, err error) {

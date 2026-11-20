@@ -152,6 +152,16 @@ export default function NavBar() {
                     </svg>
                     Moje statystyki
                   </Link>
+                  <Link
+                    to="/klucze"
+                    onClick={() => setDropdownOpen(false)}
+                    className="flex items-center gap-3 px-5 py-3.5 font-bold text-blue-900 hover:bg-blue-50 transition-colors border-b-2 border-blue-900/10"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 flex-shrink-0">
+                      <path fillRule="evenodd" d="M8 7a5 5 0 1 1 3.61 4.804l-1.903 1.903A1 1 0 0 1 9 14H8v1a1 1 0 0 1-1 1H6v1a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-2a1 1 0 0 1 .293-.707L8.196 8.39A5.002 5.002 0 0 1 8 7Zm5-3a.75.75 0 0 0 0 1.5A1.5 1.5 0 0 1 14.5 7 .75.75 0 0 0 16 7a3 3 0 0 0-3-3Z" clipRule="evenodd" />
+                    </svg>
+                    Klucze odzyskiwania
+                  </Link>
                   <button
                     onClick={handleLogout}
                     className="w-full flex items-center gap-3 px-5 py-3.5 font-bold text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
@@ -210,6 +220,7 @@ export default function NavBar() {
 
               <NavLink to="/nagraj" onClick={closeMobile}>Nagraj zdania</NavLink>
               <NavLink to="/statystyki" onClick={closeMobile}>Moje statystyki</NavLink>
+              <NavLink to="/klucze" onClick={closeMobile}>Klucze odzyskiwania</NavLink>
 
               <button
                 onClick={handleLogout}

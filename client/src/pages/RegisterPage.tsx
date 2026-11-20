@@ -51,7 +51,7 @@ export default function RegisterPage() {
     setIsLoading(true);
     try {
       // 1. Register new user in backend (Go API)
-      await api.post('/auth/register', {
+      const registerResponse = await api.post<{ recovery_keys: string[] }>('/auth/register', {
         username: trimmedUsername,
         password,
       });
@@ -72,8 +72,12 @@ export default function RegisterPage() {
         refreshToken: refresh_token,
       });
 
-      // 3. Redirect to recording studio
-      navigate('/nagraj', { replace: true });
+      const recoveryKeys = registerResponse.data.recovery_keys;
+      if (recoveryKeys?.length) {
+        navigate('/klucze', { replace: true, state: { recoveryKeys } });
+      } else {
+        navigate('/nagraj', { replace: true });
+      }
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
         if (err.response?.status === 409) {

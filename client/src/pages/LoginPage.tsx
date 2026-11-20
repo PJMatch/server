@@ -128,6 +128,12 @@ export default function LoginPage() {
         </form>
 
         <p className="text-center text-sm font-medium text-blue-900/50 mt-6">
+          <Link to="/odzyskiwanie" className="font-bold text-blue-900 underline underline-offset-2 hover:text-blue-700">
+            Nie pamiętasz hasła?
+          </Link>
+        </p>
+
+        <p className="text-center text-sm font-medium text-blue-900/50 mt-3">
           Nie masz konta?{' '}
           <Link to="/rejestracja" className="font-bold text-blue-900 underline underline-offset-2 hover:text-blue-700">
             Zarejestruj się

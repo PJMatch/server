@@ -22,6 +22,31 @@ type RefreshTokenRequest struct {
 	RefreshToken string `json:"refresh_token" binding:"required"`
 }
 
+type RecoverRequest struct {
+	Username    string `json:"username" binding:"required"`
+	RecoveryKey string `json:"recovery_key" binding:"required"`
+	NewUsername string `json:"new_username" binding:"omitempty,min=3,max=50"`
+	NewPassword string `json:"new_password" binding:"omitempty,min=8,max=72"`
+}
+
+type RegenerateRecoveryKeysRequest struct {
+	Password string `json:"password" binding:"required"`
+}
+
+type RegisterResponse struct {
+	User         UserDTO  `json:"user"`
+	RecoveryKeys []string `json:"recovery_keys"`
+}
+
+type RecoveryKeysResponse struct {
+	RecoveryKeys []string `json:"recovery_keys"`
+}
+
+type RecoverResponse struct {
+	User                  UserDTO `json:"user"`
+	RecoveryKeysRemaining int     `json:"recovery_keys_remaining"`
+}
+
 type UserDTO struct {
 	ID        uuid.UUID `json:"id"`
 	Username  string    `json:"username"`

@@ -121,6 +121,7 @@ func connectDB() (*gorm.DB, error) {
 func migrate(db *gorm.DB) error {
 	return db.AutoMigrate(
 		&models.User{},
+		&models.RecoveryKey{},
 		&models.Sign{},
 		&models.Skeleton{},
 		&models.UserProgress{},

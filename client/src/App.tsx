@@ -6,6 +6,7 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import RecordSentencePage from './pages/RecordSentencePage';
 import ComponentsPage from './pages/ComponentsPage';
+import GuidePage from './pages/GuidePage';
 import ProtectedRoute from './components/ProtectedRoute';
 
 export default function App() {
@@ -30,6 +31,7 @@ export default function App() {
                   <Route path="/logowanie" element={<LoginPage />} />
                   <Route path="/rejestracja" element={<RegisterPage />} />
                   <Route path="/komponenty" element={<ComponentsPage />} />
+                  <Route path="/poradnik" element={<GuidePage />} />
                   <Route
                     path="/nagraj"
                     element={

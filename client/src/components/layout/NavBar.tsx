@@ -98,23 +98,41 @@ export default function NavBar() {
 
   return (
     <header className="w-full bg-white/90 backdrop-blur-sm border-b-4 border-blue-900 sticky top-0 z-50">
-      <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between gap-4">
+      <div className="max-w-6xl mx-auto px-3 sm:px-6 py-4 flex items-center justify-between gap-4">
 
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-3 group flex-shrink-0">
-          <img
-            src="/logo.png"
-            alt="PJMatch"
-            className="w-9 h-9 object-contain"
-            onError={(e) => { e.currentTarget.style.display = 'none'; }}
-          />
-          <span className="text-2xl font-black text-blue-900 tracking-tight group-hover:text-blue-800 transition-colors">
-            PJMatch
-          </span>
-        </Link>
+        <div className="md:flex-1 flex items-center justify-start min-w-0">
+          <Link to="/" className="flex items-center gap-3 group flex-shrink-0">
+            <img
+              src="/logo.png"
+              alt="PJMatch"
+              className="w-28 h-14 object-contain"
+              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+            />
+            <span className="text-3xl font-black text-blue-900 tracking-tight group-hover:text-blue-800 transition-colors">
+              PJMatch
+            </span>
+          </Link>
+        </div>
 
-        {/* ── Desktop Nav ── */}
-        <nav className="hidden md:flex items-center gap-2">
+        {/* Linki nawigacyjne (środek) */}
+        <nav className="hidden md:flex items-center justify-center gap-4 flex-shrink-0">
+          <Link
+            to="/"
+            className="inline-flex items-center px-3 py-2 text-sm font-bold text-blue-900 hover:text-blue-700 hover:bg-blue-50 rounded-xl transition-all duration-200 whitespace-nowrap"
+          >
+            O projekcie
+          </Link>
+          <Link
+            to="/poradnik"
+            className="inline-flex items-center px-3 py-2 text-sm font-bold text-blue-900 hover:text-blue-700 hover:bg-blue-50 rounded-xl transition-all duration-200 whitespace-nowrap"
+          >
+            Jak nagrywać?
+          </Link>
+        </nav>
+
+        {/* ── Desktop Nav (prawa strona) ── */}
+        <nav className="hidden md:flex md:flex-1 items-center justify-end gap-2">
           {user ? (
             // Zalogowany — tylko dropdown z loginem
             <div className="relative" ref={dropdownRef}>
@@ -195,19 +213,14 @@ export default function NavBar() {
         }`}
       >
         <nav className="flex flex-col gap-2 px-6 py-5 bg-white">
+          {/* Linki nawigacyjne (mobile) */}
+          <NavLink to="/" onClick={closeMobile}>O projekcie</NavLink>
+          <NavLink to="/poradnik" onClick={closeMobile}>Jak nagrywać?</NavLink>
+
           {user ? (
             // Zalogowany (mobile)
             <>
-              <div className="flex items-center gap-3 px-4 py-3 bg-blue-50 rounded-xl border-2 border-blue-900 mb-1">
-                <span className="w-9 h-9 rounded-lg bg-blue-900 text-white text-sm font-black flex items-center justify-center flex-shrink-0">
-                  {user.login.charAt(0).toUpperCase()}
-                </span>
-                <div>
-                  <p className="font-black text-blue-900 text-sm leading-none">{user.login}</p>
-                  <p className="text-blue-900/50 text-xs mt-0.5">{user.email}</p>
-                </div>
-              </div>
-
+              <div className="h-px bg-blue-900/10 my-1" />
               <NavLink to="/nagraj" onClick={closeMobile}>Nagraj zdania</NavLink>
               <NavLink to="/statystyki" onClick={closeMobile}>Moje statystyki</NavLink>
 
@@ -224,14 +237,17 @@ export default function NavBar() {
             </>
           ) : (
             // Gość (mobile)
-            <div className="flex flex-col gap-2">
-              <Link to="/logowanie" onClick={closeMobile}>
-                <Button variant="outline" size="md" fullWidth>Zaloguj</Button>
-              </Link>
-              <Link to="/rejestracja" onClick={closeMobile}>
-                <Button variant="primary" size="md" fullWidth>Rejestracja</Button>
-              </Link>
-            </div>
+            <>
+              <div className="h-px bg-blue-900/10 my-1" />
+              <div className="flex flex-col gap-2">
+                <Link to="/logowanie" onClick={closeMobile}>
+                  <Button variant="outline" size="md" fullWidth>Zaloguj</Button>
+                </Link>
+                <Link to="/rejestracja" onClick={closeMobile}>
+                  <Button variant="primary" size="md" fullWidth>Rejestracja</Button>
+                </Link>
+              </div>
+            </>
           )}
         </nav>
       </div>
